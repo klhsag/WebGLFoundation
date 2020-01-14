@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute vec4 vPosition;
+attribute vec4 vNormal;
+attribute vec2 vTexcoord;
+
+varying vec3 N, L, E;
+
+uniform mat4 proMatrix;
+uniform mat4 mvMatrix;
+uniform mat4 mvnMatrix;
+
+
+uniform vec4 lightPosition;
+uniform vec4 eyePosition;
+
+varying vec2 fTexcoord;
+
+varying vec4 fPosition;
+
+void main()
+{
+    vec3 pos = (mvMatrix * vPosition).xyz;
+    //vec3 light = (mvMatrix * lightPosition).xyz;
+    vec3 light = lightPosition.xyz;
+
+    vec3 eye = eyePosition.xyz;
+
+    L = normalize(light - pos);
+    E = eye - pos;
+    N = normalize(( mvnMatrix * vNormal).xyz);
+
+    //mat4 inv_mv = inverse(mvMatrix);
+
+    gl_Position = proMatrix * mvMatrix * vPosition;
+
+    fTexcoord = vTexcoord;
+
+    fPosition = mvMatrix * vPosition;
+
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+precision mediump float;
+
+uniform vec4 ambientProduct;
+uniform vec4 diffuseProduct;
+uniform vec4 specularProduct;
+uniform float shininess;
+varying vec3 N, L, E;
+
+varying vec2 fTexcoord;
+
+varying vec4 fPosition;
+
+uniform sampler2D u_texture;
+uniform sampler2D bg_texture;
+
+void
+main()
+{
+  
+    vec3 H = normalize(L + E);
+    vec4 ambient = ambientProduct;
+
+    float Kd = max(dot( L,  N), 0.0);
+    vec4 diffuse = Kd * diffuseProduct;
+
+    float Ks = pow(max(dot( N, H ), 0.0), shininess);
+    vec4 specular = Ks * specularProduct;
+
+    if (dot( L,  N )<0.0){
+        specular = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+
+    vec4 fColor = ambient + diffuse + specular;
+    fColor.a = 1.0;
+    
+    gl_FragColor = fColor * texture2D(u_texture, fTexcoord) * texture2D(bg_texture, 0.1*fPosition.xz);
+
+}
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="myTexels.js"></script>
+<!--<script type="text/javascript" src="gl-helper.js"></script>-->
+<script type="text/javascript" src="gl-datahelper.js"></script>
+<script type="text/javascript" src="index-helper.js"></script>
+
+<style>
+.options{
+  margin: 2px;
+}
+
+.square_select{
+    text-align: center;
+    margin: 2px;
+    border: 1px solid red;
+    border-radius: 10px;
+}
+
+.square_select:hover{
+  background-color: coral;
+}
+
+.option_select{
+    display: inline-block;
+    width: 27%;
+    text-align: center;
+    margin: 2px;
+    border: 1px solid red;
+    border-radius: 10px;
+}
+
+.option_select:hover{
+    background-color: coral;
+}
+
+</style>
+
+</head>
+
+<body>
+<canvas id="gl-canvas" width="1080"" height="600">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+
+<div style="display: ; position:absolute; right:50px; top:50px;">
+    <div class="options" style="  border: 1px solid red;">
+        <div>
+          <div style="display: inline;">当前活动模型</div>
+          <div style="float:right;" id="model_ctr" onclick=modelListCtr()>﹀&nbsp;</div>
+        </div>
+        <div id = "model_list">
+            {{#each modelName}}
+            <div class = "square_select" id = "{{this.idx}}" onclick = selectModel(id)>{{this.name}}</div>
+            {{/each}}
+        </div>
+    </div style="  border: 1px solid red;">
+
+    <div class="options" style="  border: 1px solid red;">
+        <div id = "bg_options">
+          <div>环境</div>
+          <div class = "option_select" onclick=bgTexCtr(this)>晴空</div>
+          <div class = "option_select" onclick=bgTexCtr(this)>雨露</div>
+          <div class = "option_select" onclick=bgTexCtr(this)>棋盘</div>
+        </div>
+    </div>
+
+    <div><br /><div>
+    <div style="display: none;">
+      <span id = "x_coor"></span>
+      <span id = "y_coor"></span>
+      <span id = "z_coor"></span>
+    </div>
+    <div>
+        <h4 style="margin: auto; text-align: center;">
+            光照设置
+            <button id= "light_settings" style="margin: 3px; position: relative;">SET</button>
+        </h4>
+        <p>positon:&nbsp;
+          x <input type="text" id="light_position_x" size=4 value="5.0"/>
+          y <input type="text" id="light_position_y" size=4 value="5.0"/>
+          z <input type="text" id="light_position_z" size=4 value="20.0"/>
+        </p>
+        <p>ambient:
+            r <input type="text" id="light_ambient_r" size=4 value="0.2"/>
+            g <input type="text" id="light_ambient_g" size=4 value="0.2"/>
+            b <input type="text" id="light_ambient_b" size=4 value="0.2"/>
+        </p>
+        <p>diffuse: &nbsp;
+            r <input type="text" id="light_diffuse_r" size=4 value="1.0"/>
+            g <input type="text" id="light_diffuse_g" size=4 value="1.0"/>
+            b <input type="text" id="light_diffuse_b" size=4 value="1.0"/>
+        </p>
+        <p>specular:
+            r <input type="text" id="light_specular_r" size=4 value="1.0"/>
+            g <input type="text" id="light_specular_g" size=4 value="1.0"/>
+            b <input type="text" id="light_specular_b" size=4 value="1.0"/>
+        </p>
+    </div>
+</div><div>
+
+
+<div style="display: none;">
+  <h3>模型</h3>
+      <div id="model_cnt">{{modelCnt}}</div>
+      <div id="model_data">{{modelList}}</div>
+</div>
+
+</body>
+</html>
+

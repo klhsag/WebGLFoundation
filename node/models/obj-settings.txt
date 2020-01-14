@@ -1,0 +1,4 @@
+gin.obj
+model.obj
+pig.obj
+horse.obj *0.002

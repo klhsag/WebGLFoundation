@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute vec4 vPosition;
+attribute vec4 vNormal;
+attribute vec2 vTexcoord;
+
+varying vec3 N, L, E;
+
+uniform mat4 proMatrix;
+uniform mat4 mvMatrix;
+
+uniform vec4 lightPosition;
+uniform vec4 eyePosition;
+
+varying vec2 fTexcoord;
+
+void main()
+{
+    vec3 pos = (mvMatrix * vPosition).xyz;
+    vec3 light = (mvMatrix * lightPosition).xyz;
+
+    vec3 eye = eyePosition.xyz;
+
+    L = normalize(light - pos);
+    E = eye -pos;
+    N = normalize(( mvMatrix * vNormal).xyz);
+
+    gl_Position = proMatrix * mvMatrix * vPosition;
+
+    fTexcoord = vTexcoord;
+
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+precision mediump float;
+
+uniform vec4 ambientProduct;
+uniform vec4 diffuseProduct;
+uniform vec4 specularProduct;
+uniform float shininess;
+varying vec3 N, L, E;
+
+varying vec2 fTexcoord;
+
+uniform sampler2D u_texture;
+
+void
+main()
+{
+
+    vec3 H = normalize(L + E);
+    vec4 ambient = ambientProduct;
+
+    float Kd = max(dot( normalize(L),  normalize(N)), 0.0);
+    vec4 diffuse = Kd * diffuseProduct;
+
+    float Ks = pow(max(dot( normalize(N),  normalize(H) ), 0.0), shininess);
+    vec4 specular = Ks * specularProduct;
+
+    if (dot( normalize(L),  normalize(N) )<0.0){
+        specular = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+
+    vec4 fColor = ambient + diffuse + specular;
+    fColor.a = 1.0;
+
+    //gl_FragColor = fColor;
+    gl_FragColor = fColor * texture2D(u_texture, fTexcoord);
+
+}
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="myTexels.js"></script>
+<script type="text/javascript" src="gl-helper-b.js"></script>
+<script type="text/javascript" src="main-canvas.js"></script>
+
+<body>
+<canvas id="gl-canvas" width="1080"" height="600">
+Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+
+<div style="position:absolute; right:50px; top:50px;">
+    <p>
+        光照设置
+    </p>
+    <p style="margin: 5px;">
+        x坐标:
+        <span id= "x_coor">0</span>
+        <button id= "x_up" style="margin: 5px;">↑</button>
+        <button id= "x_down" style="margin: 5px;">↓</button>
+    </p>
+    <p style="margin: 5px;">
+        y坐标:
+        <span id= "y_coor">0</span>
+        <button id= "y_up" style="margin: 5px;">↑</button>
+        <button id= "y_down" style="margin: 5px;">↓</button>
+    </p>
+    <p style="margin: 5px;">
+        z坐标:
+        <span id= "z_coor">0</span>
+        <button id= "z_up" style="margin: 5px;">↑</button>
+        <button id= "z_down" style="margin: 5px;">↓</button>
+    </p>
+    <div>
+        <div style="margin: auto; text-align: center;">
+            param settings 
+            <button id= "light_settings" style="margin: 5px; position: relative;">SET</button>
+
+        </div>
+        
+    <p>positon:&nbsp;
+        x <input type="text" id="light_position_x" size=4 value="5.0"/>
+        y <input type="text" id="light_position_y" size=4 value="5.0"/>
+        z <input type="text" id="light_position_z" size=4 value="20.0"/>
+    </p>
+    <p>ambient:
+        r <input type="text" id="light_ambient_r" size=4 value="0.2"/>
+        g <input type="text" id="light_ambient_g" size=4 value="0.2"/>
+        b <input type="text" id="light_ambient_b" size=4 value="0.2"/>
+    </p>
+    <p>diffuse: &nbsp;
+        r <input type="text" id="light_diffuse_r" size=4 value="1.0"/>
+        g <input type="text" id="light_diffuse_g" size=4 value="1.0"/>
+        b <input type="text" id="light_diffuse_b" size=4 value="1.0"/>
+    </p>
+    <p>specular:
+        r <input type="text" id="light_specular_r" size=4 value="1.0"/>
+        g <input type="text" id="light_specular_g" size=4 value="1.0"/>
+        b <input type="text" id="light_specular_b" size=4 value="1.0"/>
+    </p>
+    </div>
+</div>
+
+<img id="logo" src="f-texture.png"></img>
+
+</body>
+</html>
